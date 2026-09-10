@@ -3,7 +3,7 @@ import parameters as p
 import auxiliary_funcs as af
 
 # PITCH ANGLE ##########################################################
-def Asim_xi(v_current, reg=False):
+def Asim_xi(v_current, reg=False): # this is already the correction
     v_current = np.asarray(v_current, dtype=float)
     x = v_current[..., 0]
     xi = v_current[..., 1]
@@ -28,7 +28,7 @@ def D_xixi(v_current, reg=True):
 
 
 # ENERGY ################################################################
-def Asim_x(v_current, reg=True):
+def Asim_x(v_current, reg=True): # total energy drift including correction
     v_current = np.asarray(v_current, dtype=float)
     x = v_current[..., 0]
     A_a = Aa_x(v_current, reg=reg)
@@ -41,7 +41,7 @@ def Asim_x(v_current, reg=True):
     return A_a + A_geom
 
 
-def Aa_x(v_current, reg=True):
+def Aa_x(v_current, reg=True): # original drift vector contribution, without correction
     v_current = np.asarray(v_current, dtype=float)
     x = v_current[..., 0]
     drift = -p.ZPAR / x**2 * af.wparb_slp(x)
@@ -62,36 +62,28 @@ def D_xx(v_current, reg=True):
 
 # TOTAL DRIFT VECTOR AND DIFFUSION TENSOR ###############################
 # x, xi means full operator 
-# no geom means no geometrical correction
-# Mesa means Dxx is zero and no geometrical correction
+# nocxn means no correction
+# Mesa means Dxx is zero and no correction
 # should do Mesa where Dxx is zero
 
-def D_xxi(v_current, reg=True):
+def D_xxi(v_current, reg=True): # full 
     Dxx = D_xx(v_current, reg=reg)
     Dxixi = D_xixi(v_current, reg=reg)
     zeros = np.zeros_like(Dxx)
-    return np.stack([ # shape (N,2,2)
+    return np.stack([
         np.stack([Dxx, zeros], axis=-1),
         np.stack([zeros, Dxixi], axis=-1),
     ], axis=-2)
 
 
-def A_xxi(v_current, reg=True):
+def A_xxi(v_current, reg=True): # full 
     v_current = np.asarray(v_current, dtype=float)
     A_x = Asim_x(v_current, reg=reg)
     A_xi = Asim_xi(v_current, reg=reg)
-    A_xi = np.zeros_like(A_x) if np.isscalar(A_xi) and not np.isscalar(A_x) else A_xi # safety patch
     return np.stack([A_x, A_xi], axis=-1)
 
 
-def A_nogeom(v_current, reg=True):
-    v_current = np.asarray(v_current, dtype=float)
-    A_x = Aa_x(v_current, reg=reg) # no correction in energy 
-    A_xi = np.zeros_like(A_x) # no correction in pitch angle, zero
-    return np.stack([A_x, A_xi], axis=-1)
-
-
-def D_nopar(v_current, reg=True):
+def D_nopar(v_current, reg=True): # no Dxx 
     Dxixi = D_xixi(v_current, reg=reg)
     zeros = np.zeros_like(Dxixi)
     return np.stack([
@@ -100,15 +92,15 @@ def D_nopar(v_current, reg=True):
     ], axis=-2)
 
 
-def A_nopar(v_current, reg=True):
+def A_nopar(v_current, reg=True): # no Dxx but keep correction to pitch angle
     v_current = np.asarray(v_current, dtype=float)
     A_x = Aa_x(v_current, reg=reg) # no correction in energy since Dxx=0
     A_xi = Asim_xi(v_current, reg=reg) # correction in pitch angle
     return np.stack([A_x, A_xi], axis=-1)
 
 
-def A_mesa(v_current, reg=True):
+def A_nocxn(v_current, reg=True): # no correction, as used by Mesa Dame
     v_current = np.asarray(v_current, dtype=float)
-    A_x = Aa_x(v_current, reg=reg) # no correction in energy since Dxx=0
-    A_xi = np.zeros_like(A_x) # no correction in pitch angle 
+    A_x = Aa_x(v_current, reg=reg) # no correction in energy 
+    A_xi = np.zeros_like(A_x) # no correction in pitch angle, zero
     return np.stack([A_x, A_xi], axis=-1)
