@@ -25,17 +25,13 @@ def _reflect_velocity_boundaries(v_new): # intermediate, process new velocities 
     return v_new
 
 
-def singlestep_mc(v_current, D_func, A_func, dt, R, Phi): # single step of multiple particles
+def singlestep_mc(v_current, D_func, A_func, dt, R, Phi): # single step of N particles
     v_current = np.asarray(v_current, dtype=float)
-    scalar_input = (v_current.ndim == 1) # if one particle
-    if scalar_input: # original shape (2,0) as [x, xi]
+    if v_current.ndim == 1:  # original shape (2,0) as [x, xi]
         v_current = v_current.reshape(1, 2)
 
-    D_loc = np.asarray(D_func(v_current), dtype=float) # loc for local 
-    D_loc = D_loc[np.newaxis, ...] # (n+1, 2, 2)
-
-    A_loc = np.asarray(A_func(v_current), dtype=float)
-    A_loc = A_loc[np.newaxis, ...] # (n+1, 2)
+    D_loc = np.asarray(D_func(v_current), dtype=float) # loc for local # (N, 2, 2)
+    A_loc = np.asarray(A_func(v_current), dtype=float) # (N, 2)
 
     std = np.sqrt(2 * np.stack([D_loc[..., 0, 0], D_loc[..., 1, 1]], axis=-1) * dt) # recall D is diagonal
     dv_D = std * np.random.standard_normal(size=v_current.shape) # N(0, std^2) ~ std * N(0,1)
@@ -47,10 +43,11 @@ def singlestep_mc(v_current, D_func, A_func, dt, R, Phi): # single step of multi
     lc_condition = np.sqrt(1 - (1 - Phi / v_new[..., 0]**2) / R) - np.abs(v_new[..., 1])
     escape = lc_condition < 0 # boolean array
 
-    if scalar_input:
+    if v_current.ndim == 1:
         return v_new[0], bool(escape[0]) # returning [x_new, xi_new], T/F
 
     return v_new, escape
+
 
 
 def _split_source_chunks(source, nprocs):
@@ -82,7 +79,7 @@ def _run_mc_chunk(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold)
     active = np.ones(numparticles, dtype=bool)
 
     for step in tqdm(range(numsteps)):
-        active_idx = np.nonzero(active)[0]
+        active_idx = np.nonzero(active)[0] 
         if active_idx.size == 0: # if all terminated or trapped, stop. 
             break
 
@@ -101,7 +98,7 @@ def _run_mc_chunk(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold)
         else: 
             stop_active = escape_active
 
-        continue_active = ~stop_active
+        continue_active = ~stop_active # something wrong here!!!#############################################
         v_current[active_idx[continue_active]] = v_new_active[continue_active]
         active[active_idx[stop_active]] = False
 
@@ -117,7 +114,7 @@ def _run_mc_chunk_wrapper(args):
     return _run_mc_chunk(*args)
 
 
-def run_mc(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold, nprocs=1):
+def run_mc(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold=0, nprocs=1):
     source = np.asarray(source, dtype=float)
     chunks = _split_source_chunks(source, nprocs)
     if len(chunks) == 1:

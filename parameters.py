@@ -49,7 +49,7 @@ V_TH_E = np.sqrt(2 * TEMP_ELEC/MASS_ELEC)
 
 TAU_oi = ((C_ad * TEMP_DEUT) / (MASS_DEUT * MASS_ALPHA**2 * V_TH_A**3 * TEMP_ALPHA) \
         + (C_at * TEMP_TRIT) / (MASS_TRIT * MASS_ALPHA**2 * V_TH_A**3 * TEMP_ALPHA) ) ** -1
-print(f'tau_o ions = {TAU_oi}')
+# print(f'tau_o ions = {TAU_oi}')
 
 ZPAR_NUM = N_DEUT * Z_DEUT**2 * LAMBDA_AD / MASS_DEUT \
          + N_TRIT * Z_TRIT**2 * LAMBDA_AT / MASS_TRIT \
@@ -59,7 +59,7 @@ ZPAR_DEN = N_DEUT * Z_DEUT**2 * LAMBDA_AD * TEMP_DEUT / (MASS_DEUT * TEMP_ALPHA)
          + N_ELEC * Z_ELEC**2 * LAMBDA_AE * TEMP_ELEC / (MASS_ELEC * TEMP_ALPHA) 
 
 ZPAR = ZPAR_NUM / ZPAR_DEN
-print(f'ZPAR = {ZPAR} should match 233.33')
+# print(f'ZPAR = {ZPAR} should match 233.33')
 
 ZPERP_NUM = N_DEUT * Z_DEUT**2 * LAMBDA_AD \
           + N_TRIT * Z_TRIT**2 * LAMBDA_AT \
@@ -68,7 +68,7 @@ ZPERP_DEN = N_DEUT * Z_DEUT**2 * LAMBDA_AD * MASS_ALPHA * TEMP_DEUT / (MASS_DEUT
           + N_TRIT * Z_TRIT**2 * LAMBDA_AT * MASS_ALPHA * TEMP_TRIT / (MASS_TRIT * TEMP_ALPHA) \
           + N_ELEC * Z_ELEC**2 * LAMBDA_AE * MASS_ALPHA * TEMP_ELEC / (MASS_ELEC * TEMP_ALPHA)
 ZPERP = 0.5 * ZPERP_NUM/ZPERP_DEN
-print(f'ZPERP = {ZPERP}')
+# print(f'ZPERP = {ZPERP}')
 
 WB_DEN = C_ad * TEMP_DEUT / MASS_DEUT \
        + C_at * TEMP_TRIT / MASS_TRIT \

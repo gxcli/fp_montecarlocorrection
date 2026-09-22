@@ -83,7 +83,7 @@ def A_xxi(v_current, reg=True): # full
     return np.stack([A_x, A_xi], axis=-1)
 
 
-def D_nopar(v_current, reg=True): # no Dxx 
+def D_nopar(v_current, reg=True): # without parallel, so no Dxx 
     Dxixi = D_xixi(v_current, reg=reg)
     zeros = np.zeros_like(Dxixi)
     return np.stack([
@@ -92,14 +92,14 @@ def D_nopar(v_current, reg=True): # no Dxx
     ], axis=-2)
 
 
-def A_nopar(v_current, reg=True): # no Dxx but keep correction to pitch angle
+def A_nopar(v_current, reg=True): # without parallel diffusion but keeps correction to pitch angle
     v_current = np.asarray(v_current, dtype=float)
     A_x = Aa_x(v_current, reg=reg) # no correction in energy since Dxx=0
     A_xi = Asim_xi(v_current, reg=reg) # correction in pitch angle
     return np.stack([A_x, A_xi], axis=-1)
 
 
-def A_nocxn(v_current, reg=True): # no correction, as used by Mesa Dame
+def A_nocxn(v_current, reg=True): # no correction at all, as used by Mesa Dame
     v_current = np.asarray(v_current, dtype=float)
     A_x = Aa_x(v_current, reg=reg) # no correction in energy 
     A_xi = np.zeros_like(A_x) # no correction in pitch angle, zero
