@@ -83,7 +83,7 @@ def A_xxi(v_current, reg=True): # full
     return np.stack([A_x, A_xi], axis=-1)
 
 
-def D_nopar(v_current, reg=True): # without parallel, so no Dxx 
+def D_nopar(v_current, reg=True): # without parallel, so no Dxx
     Dxixi = D_xixi(v_current, reg=reg)
     zeros = np.zeros_like(Dxixi)
     return np.stack([
