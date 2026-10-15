@@ -25,9 +25,10 @@ def _reflect_velocity_boundaries(v_new): # intermediate, process new velocities 
     return v_new
 
 
-def singlestep_mc(v_current, D_func, A_func, dt, R, Phi): # single step of N particles
-    v_current = np.asarray(v_current, dtype=float)
-    if v_current.ndim == 1:  # original shape (2,0) as [x, xi]
+def singlestep_mc(v_current, x_current, D_func, A_func, dt, R, Phi): # single step of N particles
+    v_current = np.asarray(v_current, dtype=float) # (N, 2)
+    x_current = np.asarray(x_current, dtype=float) # (N, 1) for now
+    if v_current.ndim == 1:  # single particle, original shape (2,0) as [x, xi]
         v_current = v_current.reshape(1, 2)
 
     D_loc = np.asarray(D_func(v_current), dtype=float) # loc for local # (N, 2, 2)
@@ -39,21 +40,24 @@ def singlestep_mc(v_current, D_func, A_func, dt, R, Phi): # single step of N par
 
     v_new = v_current + dv_D + dv_A
     v_new = _reflect_velocity_boundaries(v_new)
+    delta_vperp = v_new[:,0] * np.sqrt(1-v_new[:,1]**2) - v_current[:,0] * np.sqrt(1-v_current[:,1]**2)
+    gyro_random = np.random.uniform(0, 2*np.pi, size=x_current.shape)
+    x_new = (delta_vperp * np.cos(gyro_random))/p.OMEGA_ALPHA
 
     lc_condition = np.sqrt(1 - (1 - Phi / v_new[..., 0]**2) / R) - np.abs(v_new[..., 1])
     escape = lc_condition < 0 # boolean array
 
     if v_current.ndim == 1:
-        return v_new[0], bool(escape[0]) # returning [x_new, xi_new], T/F
+        x_new = (v_new[0] * np.sqrt(1-v_new[1]**2) - v_current[0] * np.sqrt(1-v_current[1]**2))/p.OMEGA_ALPHA
+        return v_new[0], x_new, bool(escape[0]) # returning [x_new, xi_new], T/F
 
-    return v_new, escape
-
+    return v_new, x_new, escape
 
 
 def _split_source_chunks(source, nprocs):
     source = np.asarray(source, dtype=float)
     if source.ndim == 1:
-        source = source.reshape(1, 2)
+        source = source.reshape(1, 3) # add position as the last
 
     numparticles = source.shape[0]
     if nprocs <= 1 or numparticles == 0:
@@ -67,11 +71,13 @@ def _split_source_chunks(source, nprocs):
 def _run_mc_chunk(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold): 
     source = np.asarray(source, dtype=float)
     if source.ndim == 1:
-        source = source.reshape(1, 2)
+        source = source.reshape(1, 3)
 
     numparticles = source.shape[0]
-    v_current = source.copy()
+    v_current = source[:, 0:2].copy() # first two values 
+    x_current = source[:, -1] # last value, a scalar
     last_velocity = np.zeros_like(v_current)
+    last_position = np.zeros_like(x_current)
     step_counts = np.zeros(numparticles, dtype=int)
     escaped = np.zeros(numparticles, dtype=bool)
     if speed_threshold > 0: 
@@ -84,10 +90,12 @@ def _run_mc_chunk(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold)
             break
 
         v_active = v_current[active_idx]
-        v_new_active, escape_active = singlestep_mc(v_active, D_func, A_func, dt, R, Phi) # single step
+        x_active = x_current[active_idx]
+        v_new_active, x_new_active, escape_active = singlestep_mc(v_active, x_active, D_func, A_func, dt, R, Phi) # single step
 
         step_counts[active_idx] += 1
         last_velocity[active_idx] = v_new_active # update state. ditch history of particle though.
+        last_position[active_idx] = x_new_active
         escaped[active_idx] = escape_active
         
         if speed_threshold > 0: 
@@ -100,14 +108,15 @@ def _run_mc_chunk(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold)
 
         continue_active = ~stop_active # something wrong here!!!#############################################
         v_current[active_idx[continue_active]] = v_new_active[continue_active]
+        x_current[active_idx[continue_active]] = x_new_active[continue_active]
         active[active_idx[stop_active]] = False
 
     terminated = escaped
 
     if speed_threshold > 0: 
-        return last_velocity[terminated], step_counts[terminated], escaped[terminated], trapped[terminated]
+        return last_velocity[terminated], last_position[terminated], step_counts[terminated], escaped[terminated], trapped[terminated]
     else: 
-        return last_velocity[terminated], step_counts[terminated], escaped[terminated]
+        return last_velocity[terminated], last_position[terminated], step_counts[terminated], escaped[terminated]
 
 
 def _run_mc_chunk_wrapper(args):
@@ -125,17 +134,19 @@ def run_mc(source, numsteps, D_func, A_func, dt, R, Phi, speed_threshold=0, npro
         results = list(executor.map(_run_mc_chunk_wrapper, args))
 
     if speed_threshold > 0: 
-        velocities, steps, escaped, trapped = zip(*results)
+        velocities, positions, steps, escaped, trapped = zip(*results)
         return (
                 np.concatenate(velocities, axis=0),
+                np.concatenate(positions, axis=0),
                 np.concatenate(steps, axis=0),
                 np.concatenate(escaped, axis=0),
                 np.concatenate(trapped, axis=0),
             )
     else: 
-        velocities, steps, escaped = zip(*results)
+        velocities, positions, steps, escaped = zip(*results)
         return (
                 np.concatenate(velocities, axis=0),
+                np.concatenate(positions, axis=0),
                 np.concatenate(steps, axis=0),
                 np.concatenate(escaped, axis=0),
             )

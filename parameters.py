@@ -2,19 +2,20 @@
 Global parameters, cgs units
 '''
 import numpy as np
-e = 4.8e-10 # elementary charge in statcoulombs
-eV_to_erg = 1.60218e-12
 
 ############ VALUES TAKEN FROM MESA DAME PLA 2025 TABLE 1 
 # CONSTANTS  
 e = 4.8e-10 # elementary charge in statcoulombs
 eV_to_erg = 1.60218e-12
+c = 3e10 # cm/s
+B = 3e3 # Gauss
 
 N_ALPHA = 0.3e13 # cm-3
 Z_ALPHA = 2 
-CHARGE_ALPHA = 2*e # statC
+CHARGE_ALPHA = 2*e # statCc
 MASS_ALPHA = 6.64e-24 # g
 TEMP_ALPHA = 3.5e6 * eV_to_erg # eV 
+OMEGA_ALPHA = (CHARGE_ALPHA * B) / (MASS_ALPHA * c) # alpha cyclotron frequency
 
 N_DEUT = 4.85e13 # cm-3
 Z_DEUT = 1
